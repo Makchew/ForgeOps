@@ -100,3 +100,26 @@ def test_create_project_rejects_long_name(client):
     )
 
     assert response.status_code == 422
+
+
+def test_create_project_rejects_long_description(client):
+    response = client.post(
+        "/projects",
+        json={
+            "name": "Test Project",
+            "description": "A" * 2001,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_project_rejects_missing_name(client):
+    response = client.post(
+        "/projects",
+        json={
+            "description": "A project without a name",
+        },
+    )
+
+    assert response.status_code == 422
