@@ -4,7 +4,7 @@ import logging
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
-
+from sqlalchemy.exc import SQLAlchemyError
 from app.database import Base, SessionLocal, engine
 from app.models import Project
 
@@ -65,14 +65,24 @@ def create_project(
         description=project.description,
     )
 
-    db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
+    try:
+        db.add(new_project)
+        db.commit()
+        db.refresh(new_project)
+
+    except SQLAlchemyError:
+        db.rollback()
+
+        logger.exception("Database error while creating a project")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to create project due to a database error",
+        ) from None
 
     logger.info("Project created successfully: id=%s", new_project.id)
 
     return new_project
-
 
 @app.get("/projects", response_model=list[ProjectResponse])
 def list_projects(db: Session = Depends(get_db)):
